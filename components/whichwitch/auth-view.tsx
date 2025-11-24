@@ -60,13 +60,51 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       // 获取连接的钱包地址
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
+      const did = `did:whichwitch:${address}`
       
-      // 直接构建用户信息并登录
-      const userProfile: UserProfile = {
-        did: `did:whichwitch:${address}`,
-        name: `Artisan ${address.slice(0, 6)}`,
-        bio: "Digital Craftsman",
-        skills: [],
+      // 检查数据库中是否已存在该用户
+      const response = await fetch(`/api/users?walletAddress=${address}`)
+      
+      let userProfile: UserProfile;
+      
+      if (response.ok) {
+        // 用户已存在，从数据库获取
+        const userData = await response.json();
+        userProfile = {
+          did: userData.did,
+          name: userData.name || `Artisan ${address.slice(0, 6)}`,
+          bio: userData.bio || "Digital Craftsman",
+          skills: userData.skills || []
+        };
+      } else {
+        // 用户不存在，创建新用户并保存到数据库
+        const newUserData = {
+          walletAddress: address,
+          did: did,
+          name: `Artisan ${address.slice(0, 6)}`,
+          bio: "Digital Craftsman",
+          skills: []
+        };
+        
+        const createResponse = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newUserData)
+        });
+        
+        if (!createResponse.ok) {
+          throw new Error('Failed to create user in database');
+        }
+        
+        const savedUser = await createResponse.json();
+        userProfile = {
+          did: savedUser.did,
+          name: savedUser.name,
+          bio: savedUser.bio,
+          skills: savedUser.skills || []
+        };
       }
       
       setLoading(false)
@@ -95,17 +133,36 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       const provider = new ethers.BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
+      const did = `did:whichwitch:${address}`
       
-      // 构建用户信息，使用钱包地址作为did
-      const userProfile: UserProfile = {
-        did: `did:whichwitch:${address}`,
+      // 保存用户资料到数据库
+      const userData = {
+        walletAddress: address,
+        did: did,
         name: formData.name || `Artisan ${address.slice(0, 6)}`,
         bio: formData.bio || "Digital Craftsman",
-        skills: formData.skills,
+        skills: formData.skills
+      };
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save user profile to database');
       }
       
-      // 可以在这里添加将用户信息存储到区块链或后端的逻辑
-      console.log("Creating profile for:", userProfile)
+      const savedUser = await response.json();
+      const userProfile: UserProfile = {
+        did: savedUser.did,
+        name: savedUser.name,
+        bio: savedUser.bio,
+        skills: savedUser.skills || []
+      };
       
       setLoading(false)
       onLogin(userProfile)
