@@ -1,5 +1,12 @@
 "use client"
 
+// 添加window.ethereum的类型定义
+declare global {
+  interface Window {
+    ethereum: any
+  }
+}
+
 import type React from "react"
 import Image from "next/image"
 import { useState } from "react"
@@ -7,9 +14,10 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Wallet, Sparkles, X } from "lucide-react"
+import { Loader2, Wallet, Sparkles, X, AlertCircle } from "lucide-react"
 import type { UserProfile } from "./app-container"
 import { Badge } from "@/components/ui/badge"
+import { ethers } from "ethers"
 
 export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) {
   const [step, setStep] = useState<"welcome" | "profile">("welcome")
@@ -23,28 +31,92 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
 
   const commonSkills = ["Ceramics", "Woodworking", "Digital Art", "Embroidery", "Pottery", "3D Modeling"]
 
-  const handleConnect = () => {
+  const [error, setError] = useState<string | null>(null)
+
+  const handleConnect = async () => {
     setLoading(true)
-    // Simulate wallet connection
-    setTimeout(() => {
+    setError(null)
+    
+    try {
+      // 检查是否有window.ethereum对象
+      if (!window.ethereum) {
+        throw new Error("No wallet found. Please install MetaMask or another wallet provider.")
+      }
+      
+      // 创建provider
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      
+      // 请求用户连接钱包
+      const accounts = await provider.send("eth_requestAccounts", [])
+      
+      if (accounts.length === 0) {
+        throw new Error("No accounts found in wallet.")
+      }
+      
+      // 获取当前网络
+      const network = await provider.getNetwork()
+      console.log(`Connected to network: ${network.name} (${network.chainId})`)
+      
+      // 获取连接的钱包地址
+      const signer = await provider.getSigner()
+      const address = await signer.getAddress()
+      
+      // 直接构建用户信息并登录
+      const userProfile: UserProfile = {
+        did: `did:whichwitch:${address}`,
+        name: `Artisan ${address.slice(0, 6)}`,
+        bio: "Digital Craftsman",
+        skills: [],
+      }
+      
       setLoading(false)
-      setStep("profile")
-    }, 1500)
+      onLogin(userProfile)
+    } catch (err) {
+      setLoading(false)
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("An error occurred while connecting to wallet.")
+      }
+    }
   }
 
-  const handleCreateProfile = (e: React.FormEvent) => {
+  const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // Simulate profile creation on chain
-    setTimeout(() => {
-      setLoading(false)
-      onLogin({
-        did: "did:whichwitch:0x1234...5678",
-        name: formData.name || "Anonymous Artisan",
+    setError(null)
+    
+    try {
+      if (!window.ethereum) {
+        throw new Error("Wallet connection lost.")
+      }
+      
+      // 获取连接的钱包地址
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+      const address = await signer.getAddress()
+      
+      // 构建用户信息，使用钱包地址作为did
+      const userProfile: UserProfile = {
+        did: `did:whichwitch:${address}`,
+        name: formData.name || `Artisan ${address.slice(0, 6)}`,
         bio: formData.bio || "Digital Craftsman",
         skills: formData.skills,
-      })
-    }, 1500)
+      }
+      
+      // 可以在这里添加将用户信息存储到区块链或后端的逻辑
+      console.log("Creating profile for:", userProfile)
+      
+      setLoading(false)
+      onLogin(userProfile)
+    } catch (err) {
+      setLoading(false)
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("An error occurred while creating profile.")
+      }
+    }
   }
 
   const addSkill = (skill: string) => {
@@ -84,6 +156,12 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         {step === "welcome" ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="grid gap-4">
+              {error && (
+                <div className="flex items-center gap-2 text-destructive p-3 rounded-md bg-destructive/10">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              )}
               <Button
                 size="lg"
                 className="w-full h-14 text-lg font-medium relative overflow-hidden group"

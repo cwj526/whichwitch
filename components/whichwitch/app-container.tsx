@@ -116,7 +116,8 @@ export function WhichwitchApp() {
 
         <div className="flex items-center gap-3">
           <div className="hidden sm:block text-xs font-mono text-primary bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
-            {user.did.slice(0, 6)}...{user.did.slice(-4)}
+            {/* 提取钱包地址并格式化显示 */}
+            {user.did.replace('did:whichwitch:', '').slice(0, 6)}...{user.did.replace('did:whichwitch:', '').slice(-4)}
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 border border-white/20" />
         </div>
