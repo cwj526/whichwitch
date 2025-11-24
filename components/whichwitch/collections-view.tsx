@@ -203,7 +203,7 @@ function RemixApplicationModal({ open, onOpenChange, work, onSuccess }: any) {
           </div>
 
           <div className="space-y-3">
-            <Label>Upfront License Fee</Label>
+            <Label>License Fee</Label>
             <div className="flex items-center gap-2 p-3 border border-border rounded-lg bg-muted/20">
               <Wallet className="w-4 h-4 text-primary" />
               <span className="text-sm font-mono">0.05 ETH</span>
