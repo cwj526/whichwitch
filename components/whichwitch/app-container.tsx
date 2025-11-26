@@ -13,10 +13,11 @@ import Image from "next/image"
 import { works as initialWorks } from "@/lib/mock-data"
 
 export type UserProfile = {
-  did: string
+  id: string
   name: string
   bio: string
   skills: string[]
+  walletAddress: string
 }
 
 export function WhichwitchApp() {

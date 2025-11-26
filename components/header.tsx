@@ -1,13 +1,17 @@
 "use client"
 
 import type React from "react"
-
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Menu } from "lucide-react"
+import { Menu, User, LogOut } from "lucide-react"
 import Link from "next/link" // Import Link for client-side navigation
+import { useSession, signOut } from "next-auth/react"
 
 export function Header() {
+  const { data: session } = useSession()
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+
   const navItems = [
     { name: "Features", href: "#features-section" },
     { name: "Pricing", href: "#pricing-section" },
@@ -44,11 +48,54 @@ export function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="https://vercel.com/home" target="_blank" rel="noopener noreferrer" className="hidden md:block">
-            <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-2 rounded-full font-medium shadow-sm">
-              Try for Free
-            </Button>
-          </Link>
+          {!session ? (
+            // 未登录状态显示登录/注册按钮
+            <div className="hidden md:flex items-center gap-2">
+              <Link href="/auth/login">
+                <Button variant="ghost" className="text-foreground">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/auth/register">
+                <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-2 rounded-full font-medium shadow-sm">
+                  Register
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            // 已登录状态显示用户信息
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-2 text-foreground"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+              >
+                <User className="h-5 w-5" />
+                <span>{session.user?.name || session.user?.email}</span>
+              </Button>
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <Link 
+                    href="/profile" 
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      signOut()
+                      setUserMenuOpen(false)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <Sheet>
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon" className="text-foreground">
@@ -71,11 +118,20 @@ export function Header() {
                     {item.name}
                   </Link>
                 ))}
-                <Link href="https://vercel.com/home" target="_blank" rel="noopener noreferrer" className="w-full mt-4">
-                  <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-2 rounded-full font-medium shadow-sm">
-                    Try for Free
-                  </Button>
-                </Link>
+                {!session && (
+                  <div className="flex flex-col gap-2 mt-4">
+                    <Link href="/auth/login">
+                      <Button variant="ghost" className="w-full justify-center text-foreground">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/auth/register">
+                      <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 w-full justify-center">
+                        Register
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
